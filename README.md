@@ -1,6 +1,5 @@
-# Level 3 - Advanced
+<img width="1899" height="849" alt="476361842-d532917f-e059-4119-b9a6-ba5bc3d6f243" src="https://github.com/user-attachments/assets/a83d3879-65b2-4b11-8de5-34f63ce02d01" />
 
-Welcome to Level 3! This is the pinnacle of your frontend development journey, where you'll work with real-world APIs, complex data handling, and advanced frontend concepts that mirror professional development scenarios.
 
 ## 🎯 Learning Objectives
 
