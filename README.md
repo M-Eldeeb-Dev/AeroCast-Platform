@@ -1,4 +1,5 @@
-<img width="1899" height="849" alt="476361842-d532917f-e059-4119-b9a6-ba5bc3d6f243" src="https://github.com/user-attachments/assets/a83d3879-65b2-4b11-8de5-34f63ce02d01" />
+<img width="1897" height="922" alt="image" src="https://github.com/user-attachments/assets/8cc591ee-0a0b-4345-afe5-30a4e66567fe" />
+
 
 
 ## 🎯 Learning Objectives
