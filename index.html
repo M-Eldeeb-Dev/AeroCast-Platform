@@ -1,95 +1,558 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Dashboard</title>
-    <link rel="website icon" type="svg" href="images/logo.svg">
+    <title>AeroCast — Modern Weather Dashboard</title>
+    <meta name="description"
+        content="A next-generation atmospheric intelligence dashboard featuring live particle effects, Apple-style hourly and 5-day forecasts, air quality index, interactive radar, and wind compass.">
+    <meta name="theme-color" content="#070a12">
+    <link rel="icon" type="image/svg+xml" href="images/logo.svg">
+
+    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Leaflet CSS for Radar Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+    <!-- Main CSS -->
     <link rel="stylesheet" href="css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
+
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <h1><i class="fas fa-cloud-sun"></i> Weather Dashboard</h1>
-            <div class="search-container">
-                <input type="text" id="citySearch" placeholder="Search for a city..." class="search-input">
-                <button id="searchBtn" class="search-btn">
-                    <i class="fas fa-search"></i>
-                </button>
-                <button id="locationBtn" class="location-btn" title="Get current location">
-                    <i class="fas fa-location-arrow"></i>
-                </button>
+
+    <!-- Full-screen Dynamic Atmospheric Canvas & Gradient -->
+    <canvas id="weatherCanvas" class="weather-canvas"></canvas>
+    <div id="ambientGradient" class="ambient-gradient-layer weather-clear-day"></div>
+    <div class="ambient-glow-orb orb-1"></div>
+    <div class="ambient-glow-orb orb-2"></div>
+
+    <!-- Website Root Layout -->
+    <div class="app-layout">
+
+        <!-- Modern Website Top Navigation Bar -->
+        <header class="main-header">
+            <div class="header-container">
+                <!-- Brand Logo & Name -->
+                <div class="header-brand">
+                    <img src="images/logo.svg" alt="AeroCast" class="brand-logo">
+                    <div class="brand-text-wrap">
+                        <span class="brand-title">AeroCast</span>
+                        <span class="brand-subtitle">Atmospheric Intelligence</span>
+                    </div>
+                </div>
+
+                <!-- Integrated Header Search Bar with Autocomplete Dropdown -->
+                <div class="header-search-wrap">
+                    <div class="search-input-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="citySearchInput" placeholder="Search city, region, or airport..."
+                            autocomplete="off">
+                        <button id="clearSearchBtn" class="clear-search-btn hidden" aria-label="Clear Search">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
+                    </div>
+
+                    <!-- Autocomplete Dropdown -->
+                    <div class="search-dropdown hidden" id="searchSuggestions">
+                        <!-- Populated dynamically by geocoding -->
+                    </div>
+                </div>
+
+                <!-- Header Actions & Controls -->
+                <div class="header-actions">
+                    <!-- GPS Current Location Button -->
+                    <button id="headerGpsBtn" class="action-btn" title="Use Current GPS Location">
+                        <i class="fas fa-crosshairs"></i>
+                        <span class="btn-label">Current Location</span>
+                    </button>
+
+                    <!-- Quick Celsius / Fahrenheit Unit Switcher -->
+                    <button id="quickUnitToggle" class="unit-toggle-btn" title="Toggle °C / °F">
+                        <span class="unit-c active">°C</span>
+                        <span class="unit-slash">/</span>
+                        <span class="unit-f">°F</span>
+                    </button>
+
+                    <!-- Ambient Soundscape Toggle -->
+                    <button id="ambientSoundBtn" class="action-btn icon-only" title="Toggle Atmospheric Soundscape"
+                        aria-label="Soundscape">
+                        <i class="fas fa-volume-xmark"></i>
+                    </button>
+
+                    <!-- Settings Button -->
+                    <button id="openSettingsBtn" class="action-btn icon-only" title="Preferences & Settings"
+                        aria-label="Settings">
+                        <i class="fas fa-sliders"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Popular Quick-City Filter Bar -->
+            <div class="quick-chips-bar">
+                <span class="chips-title"><i class="fas fa-compass"></i> Popular:</span>
+                <div class="chips-container">
+                    <button class="city-chip" data-city="Tokyo">Tokyo</button>
+                    <button class="city-chip" data-city="London">London</button>
+                    <button class="city-chip" data-city="New York">New York</button>
+                    <button class="city-chip" data-city="Paris">Paris</button>
+                    <button class="city-chip" data-city="Dubai">Dubai</button>
+                    <button class="city-chip" data-city="Cairo">Cairo</button>
+                    <button class="city-chip" data-city="Sydney">Sydney</button>
+                    <button class="city-chip" data-city="Singapore">Singapore</button>
+                </div>
             </div>
         </header>
 
-        <div id="loadingSpinner" class="loading-spinner hidden">
-            <div class="spinner"></div>
-            <p>Loading weather data...</p>
-        </div>
+        <!-- Main Dashboard Content -->
+        <main class="dashboard-main">
+            <div class="dashboard-grid">
 
-        <div id="errorMessage" class="error-message hidden">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span id="errorText"></span>
-        </div>
+                <!-- TOP SECTION: Hero Current Weather & Hourly Timeline -->
+                <section class="dashboard-hero-section">
+                    <!-- Left Hero Card -->
+                    <div class="glass-card hero-weather-card">
+                        <div class="hero-top-meta">
+                            <div class="hero-location-wrap">
+                                <span class="location-badge">
+                                    <i class="fas fa-location-dot"></i>
+                                    <span id="heroCityName">Cairo</span>, <span id="heroCountryCode">EG</span>
+                                </span>
+                                <span class="time-badge" id="heroDateText">Friday, Oct 2 • 19:15 Local Time</span>
+                            </div>
+                            <button id="favoriteCityBtn" class="favorite-btn" title="Save to Favorites">
+                                <i class="far fa-star"></i>
+                            </button>
+                        </div>
 
-        <!-- Current Weather Section -->
-        <section id="currentWeather" class="weather-section hidden">
-            <h2>Current Weather</h2>
-            <div class="current-weather-card">
-                <div class="weather-info">
-                    <div class="location">
-                        <h3 id="currentCity">City Name</h3>
-                        <p id="currentDate">Date</p>
+                        <div class="hero-core-display">
+                            <div class="hero-temp-block">
+                                <div class="hero-temp-number-wrap">
+                                    <span class="hero-temp-num" id="heroTemperature">28</span>
+                                    <span class="hero-temp-unit">°</span>
+                                </div>
+                                <div class="hero-hl-pills">
+                                    <span class="hl-item"><i class="fas fa-arrow-up"></i> High: <strong
+                                            id="heroHighTemp">31°</strong></span>
+                                    <span class="hl-item"><i class="fas fa-arrow-down"></i> Low: <strong
+                                            id="heroLowTemp">21°</strong></span>
+                                    <span class="hl-item"><i class="fas fa-thermometer-half"></i> Feels: <strong
+                                            id="heroFeelsLike">27°</strong></span>
+                                </div>
+                            </div>
+
+                            <div class="hero-icon-block">
+                                <div class="hero-svg-icon" id="heroConditionIcon">
+                                    <!-- Dynamic animated SVG weather icon injected here -->
+                                    <i class="fas fa-cloud-sun"></i>
+                                </div>
+                                <span class="hero-condition-text" id="heroConditionName">Scattered Clouds</span>
+                            </div>
+                        </div>
+
+                        <!-- Smart Weather Insight Banner -->
+                        <div class="smart-insight-banner">
+                            <i class="fas fa-sparkles insight-icon"></i>
+                            <p id="weatherSummaryText">Cloudy skies with gentle western breeze. Optimal conditions
+                                through the evening.</p>
+                        </div>
                     </div>
-                    <div class="temperature">
-                        <span id="currentTemp">--</span>°C
+
+                    <!-- Right Hourly Forecast Track -->
+                    <div class="glass-card hourly-forecast-card">
+                        <div class="card-header">
+                            <span class="card-title"><i class="far fa-clock"></i> 24-HOUR HOURLY FORECAST</span>
+                            <span class="card-subtitle" id="hourlySubtitle">Real-time simulation</span>
+                        </div>
+                        <div class="hourly-slider-wrap" id="hourlyTrack">
+                            <!-- Hourly forecast items generated dynamically -->
+                        </div>
                     </div>
-                    <div class="weather-description">
-                        <img id="currentIcon" src="" alt="Weather icon" class="weather-icon">
-                        <p id="currentDescription">Weather description</p>
+                </section>
+
+                <!-- MIDDLE SECTION: Two Columns (5-Day Forecast & Air Quality, Bento Metrics) -->
+                <div class="dashboard-columns-layout">
+
+                    <!-- LEFT COLUMN: 5-Day Forecast & Air Quality -->
+                    <div class="dashboard-column-left">
+                        <!-- 5-Day Forecast Card (Apple Weather Style with Range Bars) -->
+                        <section class="glass-card weekly-card">
+                            <div class="card-header">
+                                <span class="card-title"><i class="far fa-calendar-alt"></i> 5-DAY EXTENDED
+                                    FORECAST</span>
+                                <span class="card-subtitle">Min / Max Range</span>
+                            </div>
+                            <div class="weekly-forecast-list" id="weeklyList">
+                                <!-- Dynamic rows with min-max gradient progress bars -->
+                            </div>
+                        </section>
+
+                        <!-- Air Quality Index (AQI) Card -->
+                        <section class="glass-card aqi-card">
+                            <div class="card-header">
+                                <span class="card-title"><i class="fas fa-wind"></i> AIR QUALITY INDEX (AQI)</span>
+                                <span class="aqi-badge" id="aqiLevelBadge">Good • 2</span>
+                            </div>
+
+                            <div class="aqi-score-container">
+                                <div class="aqi-score-circle">
+                                    <span class="aqi-val" id="aqiNumber">32</span>
+                                    <span class="aqi-unit">US AQI</span>
+                                </div>
+                                <div class="aqi-text-details">
+                                    <h4 id="aqiStatusHeadline">Air Quality is Satisfactory</h4>
+                                    <p id="aqiAdviceText">Air quality is considered satisfactory, and air pollution
+                                        poses little or no risk.</p>
+                                </div>
+                            </div>
+
+                            <!-- Multi-stop Gradient Progress Bar -->
+                            <div class="aqi-bar-wrapper">
+                                <div class="aqi-bar-gradient"></div>
+                                <div class="aqi-bar-indicator" id="aqiBarThumb" style="left: 20%;"></div>
+                            </div>
+                            <div class="aqi-labels-row">
+                                <span>Good</span>
+                                <span>Fair</span>
+                                <span>Moderate</span>
+                                <span>Poor</span>
+                                <span>Hazardous</span>
+                            </div>
+
+                            <!-- Pollutant Breakdown Grid -->
+                            <div class="pollutants-grid">
+                                <div class="pollutant-card">
+                                    <span class="pol-name">PM2.5</span>
+                                    <span class="pol-val" id="pm25Val">6.4 µg/m³</span>
+                                </div>
+                                <div class="pollutant-card">
+                                    <span class="pol-name">PM10</span>
+                                    <span class="pol-val" id="pm10Val">32.7 µg/m³</span>
+                                </div>
+                                <div class="pollutant-card">
+                                    <span class="pol-name">O₃ (Ozone)</span>
+                                    <span class="pol-val" id="o3Val">92.8 µg/m³</span>
+                                </div>
+                                <div class="pollutant-card">
+                                    <span class="pol-name">NO₂</span>
+                                    <span class="pol-val" id="no2Val">1.4 µg/m³</span>
+                                </div>
+                                <div class="pollutant-card">
+                                    <span class="pol-name">SO₂</span>
+                                    <span class="pol-val" id="so2Val">0.7 µg/m³</span>
+                                </div>
+                                <div class="pollutant-card">
+                                    <span class="pol-name">CO</span>
+                                    <span class="pol-val" id="coVal">118 µg/m³</span>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- RIGHT COLUMN: Bento Metrics Grid -->
+                    <div class="dashboard-column-right">
+                        <div class="bento-grid">
+
+                            <!-- UV Index Card -->
+                            <div class="glass-card bento-card uv-card">
+                                <div class="bento-header">
+                                    <i class="fas fa-sun"></i> <span>UV INDEX</span>
+                                </div>
+                                <div class="bento-main">
+                                    <div class="uv-score-row">
+                                        <span class="bento-hero-val" id="uvScore">3</span>
+                                        <span class="bento-hero-label" id="uvCategory">Moderate</span>
+                                    </div>
+                                    <div class="uv-track-wrap">
+                                        <div class="uv-track-gradient"></div>
+                                        <div class="uv-track-thumb" id="uvThumb" style="left: 28%;"></div>
+                                    </div>
+                                    <p class="bento-subtext" id="uvAdvice">Take precautions if you will be outside
+                                        during midday hours.</p>
+                                </div>
+                            </div>
+
+                            <!-- Wind & 360° Compass Card -->
+                            <div class="glass-card bento-card wind-card">
+                                <div class="bento-header">
+                                    <i class="fas fa-compass"></i> <span>WIND & GUSTS</span>
+                                </div>
+                                <div class="bento-main wind-flex">
+                                    <div class="wind-readout">
+                                        <div class="wind-speed-line">
+                                            <span class="bento-hero-val" id="windSpeedVal">15</span>
+                                            <span class="bento-unit-label" id="windUnitLabel">km/h</span>
+                                        </div>
+                                        <span class="wind-dir-line" id="windDirectionText">WNW (270°)</span>
+                                        <span class="wind-gust-line" id="windGustText">Gusts: 22 km/h</span>
+                                    </div>
+                                    <div class="compass-widget">
+                                        <div class="compass-face">
+                                            <span class="p-north">N</span>
+                                            <span class="p-east">E</span>
+                                            <span class="p-south">S</span>
+                                            <span class="p-west">W</span>
+                                            <div class="compass-rotator" id="compassNeedle"
+                                                style="transform: rotate(270deg);">
+                                                <div class="compass-arrow"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sunrise & Sunset Sun Arc Tracker -->
+                            <div class="glass-card bento-card sun-card">
+                                <div class="bento-header">
+                                    <i class="fas fa-horizon"></i> <span>SUNRISE & SUNSET</span>
+                                </div>
+                                <div class="bento-main">
+                                    <div class="sun-times-bar">
+                                        <div class="sun-event-item">
+                                            <span class="label"><i class="fas fa-arrow-up"></i> Sunrise</span>
+                                            <strong id="sunriseTime">06:12</strong>
+                                        </div>
+                                        <div class="sun-event-item right">
+                                            <span class="label"><i class="fas fa-arrow-down"></i> Sunset</span>
+                                            <strong id="sunsetTime">18:45</strong>
+                                        </div>
+                                    </div>
+                                    <!-- Visual Sun Arc SVG -->
+                                    <div class="sun-arc-container">
+                                        <svg class="sun-arc-svg" viewBox="0 0 200 90" preserveAspectRatio="none">
+                                            <path d="M 20 80 A 80 80 0 0 1 180 80" fill="none"
+                                                stroke="rgba(255,255,255,0.18)" stroke-width="3"
+                                                stroke-dasharray="4,4" />
+                                            <line x1="10" y1="80" x2="190" y2="80" stroke="rgba(255,255,255,0.18)"
+                                                stroke-width="1.5" />
+                                        </svg>
+                                        <div class="moving-sun-dot" id="movingSunOrb" style="left: 70%; top: 35%;">
+                                            <i class="fas fa-sun"></i>
+                                        </div>
+                                    </div>
+                                    <p class="bento-subtext" id="sunCountdownText">Sunset in 2 hours 15 minutes</p>
+                                </div>
+                            </div>
+
+                            <!-- Feels Like Card -->
+                            <div class="glass-card bento-card feels-card">
+                                <div class="bento-header">
+                                    <i class="fas fa-thermometer-half"></i> <span>FEELS LIKE</span>
+                                </div>
+                                <div class="bento-main">
+                                    <span class="bento-hero-val" id="feelsLikeDetail">27°</span>
+                                    <p class="bento-subtext" id="feelsLikeSummary">Humidity is making it feel warmer
+                                        than the actual temperature.</p>
+                                </div>
+                            </div>
+
+                            <!-- Humidity & Dew Point Card -->
+                            <div class="glass-card bento-card humidity-card">
+                                <div class="bento-header">
+                                    <i class="fas fa-droplet"></i> <span>HUMIDITY</span>
+                                </div>
+                                <div class="bento-main">
+                                    <div class="stat-line">
+                                        <span class="bento-hero-val" id="humidityVal">28</span>
+                                        <span class="bento-unit-label">%</span>
+                                    </div>
+                                    <p class="bento-subtext" id="dewPointVal">The dew point is 8° right now.</p>
+                                </div>
+                            </div>
+
+                            <!-- Visibility Card -->
+                            <div class="glass-card bento-card visibility-card">
+                                <div class="bento-header">
+                                    <i class="fas fa-eye"></i> <span>VISIBILITY</span>
+                                </div>
+                                <div class="bento-main">
+                                    <div class="stat-line">
+                                        <span class="bento-hero-val" id="visibilityVal">10</span>
+                                        <span class="bento-unit-label">km</span>
+                                    </div>
+                                    <p class="bento-subtext" id="visibilityDesc">Clear view. Exceptional visibility
+                                        across horizons.</p>
+                                </div>
+                            </div>
+
+                            <!-- Barometric Pressure Card -->
+                            <div class="glass-card bento-card pressure-card">
+                                <div class="bento-header">
+                                    <i class="fas fa-gauge-high"></i> <span>PRESSURE</span>
+                                </div>
+                                <div class="bento-main">
+                                    <div class="stat-line">
+                                        <span class="bento-hero-val" id="pressureVal">1016</span>
+                                        <span class="bento-unit-label">hPa</span>
+                                    </div>
+                                    <p class="bento-subtext" id="pressureTrend"><i class="fas fa-arrow-trend-up"></i>
+                                        Steady barometric pressure</p>
+                                </div>
+                            </div>
+
+                            <!-- Cloud Cover Card -->
+                            <div class="glass-card bento-card clouds-card">
+                                <div class="bento-header">
+                                    <i class="fas fa-cloud"></i> <span>CLOUD COVER</span>
+                                </div>
+                                <div class="bento-main">
+                                    <div class="stat-line">
+                                        <span class="bento-hero-val" id="cloudsVal">36</span>
+                                        <span class="bento-unit-label">%</span>
+                                    </div>
+                                    <p class="bento-subtext" id="cloudsDesc">Scattered cloud layers visible in the sky.
+                                    </p>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
-                <div class="weather-details">
-                    <div class="detail-item">
-                        <i class="fas fa-thermometer-half"></i>
-                        <span>Feels like: <span id="feelsLike">--</span>°C</span>
+
+                <!-- BOTTOM SECTION: Interactive Weather Radar & Saved Locations -->
+                <section class="dashboard-bottom-section">
+                    <div class="glass-card saved-cities-card">
+                        <div class="card-header">
+                            <span class="card-title"><i class="fas fa-city"></i> SAVED LOCATIONS</span>
+                            <span class="card-subtitle" id="savedCountLabel">0 cities</span>
+                        </div>
+                        <div class="saved-cities-grid" id="savedCitiesList">
+                            <!-- Dynamic city cards -->
+                        </div>
                     </div>
-                    <div class="detail-item">
-                        <i class="fas fa-tint"></i>
-                        <span>Humidity: <span id="humidity">--</span>%</span>
-                    </div>
-                    <div class="detail-item">
-                        <i class="fas fa-wind"></i>
-                        <span>Wind: <span id="windSpeed">--</span> km/h</span>
-                    </div>
-                    <div class="detail-item">
-                        <i class="fas fa-eye"></i>
-                        <span>Visibility: <span id="visibility">--</span> km</span>
-                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- Modern Footer -->
+        <footer class="main-footer">
+            <div class="footer-container">
+                <div class="footer-left">
+                    <img src="images/logo.svg" alt="AeroCast" class="footer-logo">
+                    <span>AeroCast Weather Intelligence &bull; Live OpenWeatherMap API & Satellite feeds</span>
+                </div>
+                <div class="footer-right">
+                    <span>Designed with high-potential modern aesthetics & glassmorphic engineering</span>
                 </div>
             </div>
-        </section>
-
-        <!-- Forecast Section -->
-        <section id="forecastSection" class="weather-section hidden">
-            <h2>3-Day Forecast</h2>
-            <div class="forecast-container" id="forecastContainer">
-                <!-- Forecast cards will be dynamically generated here -->
-            </div>
-        </section>
-
-        <!-- Recent Cities -->
-        <section id="recentCities" class="weather-section">
-            <h2>Recent Cities</h2>
-            <div class="recent-cities-container" id="recentCitiesContainer">
-                <!-- Recent cities will be dynamically generated here -->
-            </div>
-        </section>
+        </footer>
     </div>
 
+    <!-- Preferences & Settings Modal -->
+    <div class="modal-backdrop hidden" id="settingsModalBackdrop">
+        <div class="modal-dialog" id="settingsModal">
+            <div class="modal-header">
+                <h2>Dashboard Preferences</h2>
+                <button class="modal-close-btn" id="closeSettingsBtn" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Temperature Units -->
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <strong>Temperature Scale</strong>
+                        <p>Select your preferred temperature representation</p>
+                    </div>
+                    <div class="segmented-control" id="tempUnitSegmented">
+                        <button class="seg-btn active" data-unit="metric">Celsius (°C)</button>
+                        <button class="seg-btn" data-unit="imperial">Fahrenheit (°F)</button>
+                    </div>
+                </div>
+
+                <!-- Wind Speed Units -->
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <strong>Wind Velocity Unit</strong>
+                        <p>Format for wind speed and gust reporting</p>
+                    </div>
+                    <div class="segmented-control" id="windUnitSegmented">
+                        <button class="seg-btn active" data-wind="kmh">km/h</button>
+                        <button class="seg-btn" data-wind="mph">mph</button>
+                        <button class="seg-btn" data-wind="ms">m/s</button>
+                    </div>
+                </div>
+
+                <!-- Pressure Units -->
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <strong>Barometric Pressure Unit</strong>
+                        <p>Measurement standard for atmospheric pressure</p>
+                    </div>
+                    <div class="segmented-control" id="pressureUnitSegmented">
+                        <button class="seg-btn active" data-pressure="hpa">hPa</button>
+                        <button class="seg-btn" data-pressure="inhg">inHg</button>
+                    </div>
+                </div>
+
+                <!-- Atmosphere Particles Simulation -->
+                <div class="setting-toggle-item">
+                    <div class="setting-info">
+                        <strong>Atmosphere Canvas Simulation</strong>
+                        <p>Dynamic rain, snow, star twinkle, and cloud particle engine</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="particlesToggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <!-- Ambient Audio Soundscape -->
+                <div class="setting-toggle-item">
+                    <div class="setting-info">
+                        <strong>Atmospheric Soundscapes</strong>
+                        <p>Subtle synthesized breeze and rain audio generator (Web Audio API)</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="soundToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <!-- Clear Data -->
+                <div class="setting-item-danger">
+                    <button id="resetDefaultsBtn" class="danger-action-btn">
+                        <i class="fas fa-trash-can"></i> Clear All Saved Locations & Cached Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Glassmorphic Loading Overlay -->
+    <div class="glass-loader hidden" id="appLoader">
+        <div class="loader-box">
+            <div class="loader-weather-icon">
+                <i class="fas fa-cloud-sun-rain"></i>
+            </div>
+            <div class="loader-spinner"></div>
+            <p id="loaderMessage">Analyzing atmospheric satellite data...</p>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast-popup hidden" id="toastNotification">
+        <i class="fas fa-circle-check toast-icon" id="toastIcon"></i>
+        <span class="toast-msg" id="toastText">Notification message</span>
+    </div>
+
+    <!-- Leaflet JS for Interactive Radar Map -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Main JavaScript Logic -->
     <script src="js/script.js"></script>
 </body>
+
 </html>
